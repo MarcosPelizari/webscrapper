@@ -5,6 +5,7 @@ import org.jsoup.*;
 import org.jsoup.nodes.*;
 import org.jsoup.select.*;
 import scrap.Produto;
+import scrap.Skus;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,6 +17,7 @@ public class Main {
         String url = "https://infosimples.com/vagas/desafio/commercia/product.html";
         String userAgent = "Mozilla/5.0 (Windows NT 11.0; Win64;x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.6998.166 Safari/537.36";
         List<Produto> produtos = new ArrayList<>();
+        List<Skus> skus = new ArrayList<>();
         Document doc;
 
         try {
@@ -47,6 +49,48 @@ public class Main {
             for (Element description: descriptionElements)
                 descriptionText.append(description.text().trim()).append(" ");
             produto.setDescription(descriptionText.toString().trim());
+
+
+            //Extrair produtos(skus)
+            Elements skusElements = product.select(".skus-area .card");
+            for (Element skuElement: skusElements) {
+                Skus sku = new Skus();
+
+                //Nome
+                Element nameElement = skuElement.select("meta[itemprop='name']").first();
+                sku.setName(nameElement != null ? nameElement.attr("content").trim() : "");
+
+                //Preço Atual(Current Price)
+                Element currentPriceElement = skuElement.select("div[class='prod-pnow']").first();
+                Double currentPrice = null;
+                if (currentPriceElement != null) {
+                    String priceText = currentPriceElement.text()
+                            .replace("R$", "")
+                            .replace(",", ".")
+                            .trim();
+                    currentPrice =Double.parseDouble(priceText);
+                }
+                sku.setCurrentPrice(currentPrice != null ?  currentPrice : null);
+
+                //Preço Antigo(Old Price)
+                Element oldPriceElement = skuElement.select(".prod-pold").first();
+                Double oldPrice = null;
+                if (oldPriceElement != null) {
+                    String priceText = oldPriceElement.text()
+                            .replace("R$", "")
+                            .replace(",", ".")
+                            .trim();
+                    oldPrice = Double.parseDouble(priceText);
+                }
+                sku.setOldPrice(oldPrice != null ? oldPrice : null);
+
+                //Disponivel?(Available)
+                Boolean available = !skuElement.select("i").text().contains("Out of stock");
+                sku.setAvailable(available);
+
+                skus.add(sku);
+            }
+            produto.setSkus(skus);
 
             produtos.add(produto);
         }
