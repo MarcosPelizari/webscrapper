@@ -26,7 +26,7 @@ public class Main {
                     .userAgent(userAgent)
                     .get();
 
-        Elements produtosElementos = doc.select(".container");
+        Elements produtosElementos = doc.select("section[class='page']");
 
         for (Element product: produtosElementos) {
             Produto produto = new Produto();
@@ -64,25 +64,25 @@ public class Main {
 
                 //Preço Atual(Current Price)
                 Element currentPriceElement = skuElement.select("div[class='prod-pnow']").first();
-                Double currentPrice = null;
+                Float currentPrice = null;
                 if (currentPriceElement != null) {
                     String priceText = currentPriceElement.text()
                             .replace("R$", "")
                             .replace(",", ".")
                             .trim();
-                    currentPrice =Double.parseDouble(priceText);
+                    currentPrice =Float.parseFloat(priceText);
                 }
                 sku.setCurrentPrice(currentPrice != null ?  currentPrice : null);
 
                 //Preço Antigo(Old Price)
                 Element oldPriceElement = skuElement.select(".prod-pold").first();
-                Double oldPrice = null;
+                Float oldPrice = null;
                 if (oldPriceElement != null) {
                     String priceText = oldPriceElement.text()
                             .replace("R$", "")
                             .replace(",", ".")
                             .trim();
-                    oldPrice = Double.parseDouble(priceText);
+                    oldPrice = Float.parseFloat(priceText);
                 }
                 sku.setOldPrice(oldPrice != null ? oldPrice : null);
 
@@ -156,11 +156,27 @@ public class Main {
                 }
             }
 
+            //Média Score
+            Float averageScore = 0.0F;
+            Elements avgElement = product.select("div[id='comments'] h4");
+            String avgScore = avgElement.text().trim();
+
+            //Retirar o texto do elemento que veio no HTML
+            avgScore = avgScore.replace("Average score:", "").trim();
+            String[] scoreParts = avgScore.split("/");
+            averageScore = Float.parseFloat(scoreParts[0]);
+            averageScore = Math.min(Math.max(averageScore, 1.0F), 5.0F);
+            String scoreFormatado = String.format("%.2f", averageScore);
+            averageScore = Float.parseFloat(scoreFormatado);
+
+
 
             //Incluir Listas no produto
             produto.setSkus(skus);
             produto.setProperties(properties);
             produto.setReviews(reviews);
+            produto.setAvgReview(averageScore);
+            produto.setUrl(url);
 
             if (!produto.getTitle().isEmpty()) {
                 produtos.add(produto);
