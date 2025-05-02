@@ -36,9 +36,9 @@ public class Main {
 
             //Extrair Categorias
             Elements categoryElements = product.select("nav[aria-label=breadcrumbs]");
-            String[] categories = categoryElements.stream()
-                    .map(Element::text)
-                    .toArray(String[]::new);
+            String categorieText = categoryElements.text().trim();
+            String[] categories = categorieText.split("\\s*>\\s*");
+
             produto.setCategories(categories);
 
             //Extrair Descrição
