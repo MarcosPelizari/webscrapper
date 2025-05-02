@@ -6,6 +6,7 @@ import org.jsoup.nodes.*;
 import org.jsoup.select.*;
 import scrap.Produto;
 import scrap.Properties;
+import scrap.Reviews;
 import scrap.Skus;
 
 import java.io.File;
@@ -123,8 +124,43 @@ public class Main {
                 }
             }
 
-            produto.setProperties(properties);
+            //Lista Reviews
+            List<Reviews> reviews = new ArrayList<>();
+            Elements reviewsElement = product.select(".analisebox");
+            if (reviewsElement != null) {
+                for (Element review: reviewsElement) {
+                    Reviews reviewsSite = new Reviews();
+
+                    //Nome
+                    Element name = review.select(".analiseusername").first();
+                    reviewsSite.setName(name.text().trim());
+
+                    //Data
+                    Element dataReview = review.select(".analisedate").first();
+                    reviewsSite.setDate(dataReview.text().trim());
+
+                    //Avaliação
+                    Element scoreReview = review.select(".analisestars").first();
+                    String stars = scoreReview.text().trim();
+                    int score = (int) stars.codePoints()
+                            .filter(ch -> ch == '★')
+                            .count();
+                    score = Math.min(Math.max(score, 1), 5);
+                    reviewsSite.setScore(score);
+
+                    //Texto
+                    Element textoElement = review.select("p").first();
+                    reviewsSite.setText(textoElement.text().trim());
+
+                    reviews.add(reviewsSite);
+                }
+            }
+
+
+            //Incluir Listas no produto
             produto.setSkus(skus);
+            produto.setProperties(properties);
+            produto.setReviews(reviews);
 
             if (!produto.getTitle().isEmpty()) {
                 produtos.add(produto);
