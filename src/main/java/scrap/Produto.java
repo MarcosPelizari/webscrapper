@@ -11,7 +11,7 @@ public class Produto {
     private List<Skus> skus;
     private List<Properties> properties;
     private List<Reviews> reviews;
-    private double avgReview;
+    private Float avgReview;
     private String url;
 
     public String getTitle() {
@@ -70,11 +70,11 @@ public class Produto {
         this.reviews = reviews;
     }
 
-    public double getAvgReview() {
+    public Float getAvgReview() {
         return avgReview;
     }
 
-    public void setAvgReview(double avgReview) {
+    public void setAvgReview(Float avgReview) {
         this.avgReview = avgReview;
     }
 
