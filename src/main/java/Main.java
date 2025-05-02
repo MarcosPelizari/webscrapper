@@ -5,6 +5,9 @@ import org.jsoup.*;
 import org.jsoup.nodes.*;
 import org.jsoup.select.*;
 import scrap.Produto;
+import scrap.Properties;
+import scrap.Reviews;
+import scrap.Skus;
 
 import java.io.File;
 import java.io.IOException;
@@ -23,7 +26,7 @@ public class Main {
                     .userAgent(userAgent)
                     .get();
 
-        Elements produtosElementos = doc.select(".container");
+        Elements produtosElementos = doc.select("section[class='page']");
 
         for (Element product: produtosElementos) {
             Produto produto = new Produto();
@@ -36,9 +39,9 @@ public class Main {
 
             //Extrair Categorias
             Elements categoryElements = product.select("nav[aria-label=breadcrumbs]");
-            String[] categories = categoryElements.stream()
-                    .map(Element::text)
-                    .toArray(String[]::new);
+            String categorieText = categoryElements.text().trim();
+            String[] categories = categorieText.split("\\s*>\\s*");
+
             produto.setCategories(categories);
 
             //Extrair Descrição
@@ -48,7 +51,136 @@ public class Main {
                 descriptionText.append(description.text().trim()).append(" ");
             produto.setDescription(descriptionText.toString().trim());
 
-            produtos.add(produto);
+
+            //Extrair produtos(skus)
+            List<Skus> skus = new ArrayList<>();
+            Elements skusElements = product.select(".skus-area .card");
+            for (Element skuElement: skusElements) {
+                Skus sku = new Skus();
+
+                //Nome
+                Element nameElement = skuElement.select("meta[itemprop='name']").first();
+                sku.setName(nameElement != null ? nameElement.attr("content").trim() : "");
+
+                //Preço Atual(Current Price)
+                Element currentPriceElement = skuElement.select("div[class='prod-pnow']").first();
+                Float currentPrice = null;
+                if (currentPriceElement != null) {
+                    String priceText = currentPriceElement.text()
+                            .replace("R$", "")
+                            .replace(",", ".")
+                            .trim();
+                    currentPrice =Float.parseFloat(priceText);
+                }
+                sku.setCurrentPrice(currentPrice != null ?  currentPrice : null);
+
+                //Preço Antigo(Old Price)
+                Element oldPriceElement = skuElement.select(".prod-pold").first();
+                Float oldPrice = null;
+                if (oldPriceElement != null) {
+                    String priceText = oldPriceElement.text()
+                            .replace("R$", "")
+                            .replace(",", ".")
+                            .trim();
+                    oldPrice = Float.parseFloat(priceText);
+                }
+                sku.setOldPrice(oldPrice != null ? oldPrice : null);
+
+                //Disponivel?(Available)
+                Boolean available = !skuElement.select("i").text().contains("Out of stock");
+                sku.setAvailable(available);
+
+                skus.add(sku);
+            }
+
+            //Lista Propriedades(Properties)
+            List<Properties> properties = new ArrayList<>();
+            Element propertiesElement = product.select("table.pure-table.pure-table-bordered").first();
+            if (propertiesElement != null) {
+                Elements rows = propertiesElement.select("tbody tr");
+                for (Element row : rows) {
+                    Elements cells = row.select("td");
+                    if (cells.size() >= 2) {
+                        Properties propriedade = new Properties();
+                        propriedade.setLabel(cells.get(0).text().trim());
+                        propriedade.setValue(cells.get(1).text().trim());
+                        properties.add(propriedade);
+                    }
+                }
+            }
+
+            //Segunda Lista de Propriedades
+            Element secondTable = product.select("div[id='propadd']").first();
+            if (secondTable != null) {
+                Elements rows = secondTable.select("tbody tr");
+                for (Element row: rows) {
+                    Elements cells = row.select("td");
+                    if (cells.size() >= 2) {
+                        Properties propriedade = new Properties();
+                        propriedade.setLabel(cells.get(0).text().trim());
+                        propriedade.setValue(cells.get(1).text().trim());
+                        properties.add(propriedade);
+                    }
+                }
+            }
+
+            //Lista Reviews
+            List<Reviews> reviews = new ArrayList<>();
+            Elements reviewsElement = product.select(".analisebox");
+            if (reviewsElement != null) {
+                for (Element review: reviewsElement) {
+                    Reviews reviewsSite = new Reviews();
+
+                    //Nome
+                    Element name = review.select(".analiseusername").first();
+                    reviewsSite.setName(name.text().trim());
+
+                    //Data
+                    Element dataReview = review.select(".analisedate").first();
+                    reviewsSite.setDate(dataReview.text().trim());
+
+                    //Avaliação
+                    Element scoreReview = review.select(".analisestars").first();
+                    String stars = scoreReview.text().trim();
+                    int score = (int) stars.codePoints()
+                            .filter(ch -> ch == '★')
+                            .count();
+                    score = Math.min(Math.max(score, 1), 5);
+                    reviewsSite.setScore(score);
+
+                    //Texto
+                    Element textoElement = review.select("p").first();
+                    reviewsSite.setText(textoElement.text().trim());
+
+                    reviews.add(reviewsSite);
+                }
+            }
+
+            //Média Score
+            Float averageScore = 0.0F;
+            Elements avgElement = product.select("div[id='comments'] h4");
+            String avgScore = avgElement.text().trim();
+
+            //Retirar o texto do elemento que veio no HTML
+            avgScore = avgScore.replace("Average score:", "").trim();
+            String[] scoreParts = avgScore.split("/");
+            averageScore = Float.parseFloat(scoreParts[0]);
+            averageScore = Math.min(Math.max(averageScore, 1.0F), 5.0F);
+            String scoreFormatado = String.format("%.2f", averageScore);
+            averageScore = Float.parseFloat(scoreFormatado);
+
+
+
+            //Incluir Listas no produto
+            produto.setSkus(skus);
+            produto.setProperties(properties);
+            produto.setReviews(reviews);
+            produto.setAvgReview(averageScore);
+            produto.setUrl(url);
+
+            if (!produto.getTitle().isEmpty()) {
+                produtos.add(produto);
+            }
         }
 
         ObjectMapper mapper = new ObjectMapper();

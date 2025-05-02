@@ -2,8 +2,8 @@ package scrap;
 
 public class Skus {
     private String name;
-    private double currentPrice;
-    private double oldPrice;
+    private Float currentPrice;
+    private Float oldPrice;
     private boolean available;
 
     public String getName() {
@@ -14,19 +14,19 @@ public class Skus {
         this.name = name;
     }
 
-    public double getCurrentPrice() {
+    public Float getCurrentPrice() {
         return currentPrice;
     }
 
-    public void setCurrentPrice(double currentPrice) {
+    public void setCurrentPrice(Float currentPrice) {
         this.currentPrice = currentPrice;
     }
 
-    public double getOldPrice() {
+    public Float getOldPrice() {
         return oldPrice;
     }
 
-    public void setOldPrice(double oldPrice) {
+    public void setOldPrice(Float oldPrice) {
         this.oldPrice = oldPrice;
     }
 
