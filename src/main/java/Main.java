@@ -5,6 +5,7 @@ import org.jsoup.*;
 import org.jsoup.nodes.*;
 import org.jsoup.select.*;
 import scrap.Produto;
+import scrap.Properties;
 import scrap.Skus;
 
 import java.io.File;
@@ -17,7 +18,6 @@ public class Main {
         String url = "https://infosimples.com/vagas/desafio/commercia/product.html";
         String userAgent = "Mozilla/5.0 (Windows NT 11.0; Win64;x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.6998.166 Safari/537.36";
         List<Produto> produtos = new ArrayList<>();
-        List<Skus> skus = new ArrayList<>();
         Document doc;
 
         try {
@@ -52,6 +52,7 @@ public class Main {
 
 
             //Extrair produtos(skus)
+            List<Skus> skus = new ArrayList<>();
             Elements skusElements = product.select(".skus-area .card");
             for (Element skuElement: skusElements) {
                 Skus sku = new Skus();
@@ -90,9 +91,44 @@ public class Main {
 
                 skus.add(sku);
             }
+
+            //Lista Propriedades(Properties)
+            List<Properties> properties = new ArrayList<>();
+            Element propertiesElement = product.select("table.pure-table.pure-table-bordered").first();
+            if (propertiesElement != null) {
+                Elements rows = propertiesElement.select("tbody tr");
+                for (Element row : rows) {
+                    Elements cells = row.select("td");
+                    if (cells.size() >= 2) {
+                        Properties propriedade = new Properties();
+                        propriedade.setLabel(cells.get(0).text().trim());
+                        propriedade.setValue(cells.get(1).text().trim());
+                        properties.add(propriedade);
+                    }
+                }
+            }
+
+            //Segunda Lista de Propriedades
+            Element secondTable = product.select("div[id='propadd']").first();
+            if (secondTable != null) {
+                Elements rows = secondTable.select("tbody tr");
+                for (Element row: rows) {
+                    Elements cells = row.select("td");
+                    if (cells.size() >= 2) {
+                        Properties propriedade = new Properties();
+                        propriedade.setLabel(cells.get(0).text().trim());
+                        propriedade.setValue(cells.get(1).text().trim());
+                        properties.add(propriedade);
+                    }
+                }
+            }
+
+            produto.setProperties(properties);
             produto.setSkus(skus);
 
-            produtos.add(produto);
+            if (!produto.getTitle().isEmpty()) {
+                produtos.add(produto);
+            }
         }
 
         ObjectMapper mapper = new ObjectMapper();
